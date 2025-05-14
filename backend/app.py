@@ -25,7 +25,9 @@ def create_connection():
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
-    username = data.get('username')
+    print("Received Data:", data)  # Debug line to see the incoming request
+    
+    username = data.get('username')  # Ensure this matches the form input
     email = data.get('email')
     password = data.get('password')
 
@@ -43,6 +45,7 @@ def register():
         conn.close()
         return jsonify({"status": "success", "message": "User registered successfully!"}), 201
     except Exception as e:
+        print("Error during registration:", str(e))  # Error logging
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -163,6 +166,19 @@ def update_application_status():
         conn.commit()
         conn.close()
         return jsonify({'status': 'success', 'message': 'Application status updated'}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+@app.route('/jobs', methods=['GET'])
+def get_jobs():
+    try:
+        conn = sqlite3.connect('jobs.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, title, description FROM jobs')
+        jobs = cursor.fetchall()
+        conn.close()
+
+        job_list = [{'id': row[0], 'title': row[1], 'description': row[2]} for row in jobs]
+        return jsonify({'status': 'success', 'jobs': job_list}), 200
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
