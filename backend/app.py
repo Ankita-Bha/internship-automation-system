@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import os
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -13,7 +13,7 @@ from job_apis.findwork import fetch_findwork_jobs
 from job_apis.jooble import fetch_jooble_jobs
 
 app = Flask(__name__)
-CORS(app)
+CORS(app,supports_credentials=True)
 
 app.config["JWT_SECRET_KEY"] = "your_secret_key"
 jwt = JWTManager(app)
@@ -37,16 +37,31 @@ def register():
 
     password_hash = generate_password_hash(password)
 
+    conn = None
     try:
         conn = create_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)", 
-                       (username, email, password_hash))
+
+        # Check if email already exists
+        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+        existing_user = cursor.fetchone()
+        if existing_user:
+            return jsonify({"status": "error", "message": "Email already registered"}), 409  # Conflict
+
+        # Insert new user
+        cursor.execute(
+            "INSERT INTO users (username, email, password) VALUES (?, ?, ?)", 
+            (username, email, password_hash)
+        )
         conn.commit()
-        conn.close()
         return jsonify({"status": "success", "message": "User registered successfully!"}), 201
+
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -68,16 +83,50 @@ def login():
     access_token = create_access_token(identity=str(user[0]))
     return jsonify({"status": "success", "access_token": access_token}), 200
 
+'''@app.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    current_user = get_jwt_identity()
+    if not isinstance(current_user, str):
+        return jsonify({"msg": "Subject must be a string"}), 422
+    return jsonify({
+        "status": "success",
+        "message": "This is a protected route!",
+        "user": current_user
+    }), 200'''
+
 @app.route('/protected', methods=['GET'])
 @jwt_required()
 def protected():
-    identity = get_jwt_identity()
-    if not isinstance(identity, str):
-        return jsonify({"msg": "Subject must be a string"}), 422
-    return jsonify({"status": "success", "message": "This is a protected route!"}), 200
+    user_id = get_jwt_identity()
+
+    try:
+        conn = sqlite3.connect('jobs.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username, email FROM users WHERE id = ?", (user_id,))
+        user = cursor.fetchone()
+        conn.close()
+
+        if not user:
+            return jsonify({"status": "error", "message": "User not found"}), 404
+
+        return jsonify({
+            "status": "success",
+            "message": "This is a protected route!",
+            "user": {
+                "id": user[0],
+                "username": user[1],
+                "email": user[2]
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @app.route('/upload-resume', methods=['POST'])
+@jwt_required()
 def upload_resume():
+    user_id = get_jwt_identity()
     if 'resume' not in request.files:
         return jsonify({'status': 'error', 'message': 'No file uploaded'}), 400
 
@@ -88,8 +137,11 @@ def upload_resume():
     parsed_text = parse_resume(filepath)
     return jsonify({'status': 'success', 'parsed_text': parsed_text})
 
+
 @app.route('/match-jobs', methods=['POST'])
+@jwt_required()
 def match_jobs_api():
+    user_id = get_jwt_identity()
     data = request.get_json()
     resume_text = data.get('resume_text', '')
 
@@ -99,17 +151,24 @@ def match_jobs_api():
     matches = match_jobs(resume_text)
     return jsonify({'status': 'success', 'matches': matches})
 
-@app.route('/apply-all', methods=['POST'])
+
+@app.route('/apply-all', methods=['POST', 'OPTIONS'])
+@cross_origin(supports_credentials=True)
+@jwt_required()
 def apply_all_jobs():
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    user_id = get_jwt_identity()
     data = request.get_json()
-    user_id = data.get('user_id')
     job_ids = data.get('job_ids')
 
-    if not user_id or not job_ids or not isinstance(job_ids, list):
-        return jsonify({'status': 'error', 'message': 'Invalid user ID or job list'}), 400
+    if not job_ids or not isinstance(job_ids, list):
+        return jsonify({'status': 'error', 'message': 'Invalid job list'}), 400
 
     try:
-        conn = create_connection()
+        conn = sqlite3.connect('jobs.db')
         cursor = conn.cursor()
         for job_id in job_ids:
             cursor.execute('INSERT INTO job_applications (user_id, job_id, status) VALUES (?, ?, ?)', 
@@ -140,18 +199,19 @@ def add_job():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/apply-job', methods=['POST'])
+@jwt_required()
 def apply_job():
-    data = request.get_json()
-    user_id = data.get('user_id')
-    job_id = data.get('job_id')
+    user_id = get_jwt_identity()
 
-    if not user_id or not job_id:
-        return jsonify({'status': 'error', 'message': 'User ID and Job ID are required'}), 400
+    job_id = request.form.get('job_id')  # Expecting from FormData
+
+    if not job_id:
+        return jsonify({'status': 'error', 'message': 'Job ID is required'}), 400
 
     try:
         conn = sqlite3.connect('jobs.db')
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO job_applications (user_id, job_id, status) VALUES (?, ?, ?)', 
+        cursor.execute('INSERT INTO job_applications (user_id, job_id, status) VALUES (?, ?, ?)',
                        (user_id, job_id, 'Pending'))
         conn.commit()
         conn.close()
@@ -192,26 +252,6 @@ def get_jobs():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-@app.route('/apply-multiple', methods=['POST'])
-def apply_multiple():
-    data = request.get_json()
-    user_id = data.get('user_id')
-    job_ids = data.get('job_ids', [])
-
-    if not user_id or not job_ids:
-        return jsonify({'status': 'error', 'message': 'User ID and Job IDs are required'}), 400
-
-    try:
-        conn = sqlite3.connect('jobs.db')
-        cursor = conn.cursor()
-        for job_id in job_ids:
-            cursor.execute('INSERT INTO job_applications (user_id, job_id, status) VALUES (?, ?, ?)',
-                           (user_id, job_id, 'Pending'))
-        conn.commit()
-        conn.close()
-        return jsonify({'status': 'success', 'message': 'Applications submitted'}), 201
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # 🚀 New Route for External Aggregated Jobs
 @app.route('/api/external-jobs', methods=['GET'])
@@ -251,8 +291,11 @@ def scrape_naukri():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500'''
 
-@app.route('/application-status/<int:user_id>', methods=['GET'])
-def get_application_status(user_id):
+@app.route('/application-status', methods=['GET'])
+@jwt_required()
+def get_application_status():
+    user_id = get_jwt_identity()
+
     try:
         conn = sqlite3.connect('jobs.db')
         cursor = conn.cursor()
@@ -281,7 +324,6 @@ def get_application_status(user_id):
         return jsonify({'status': 'success', 'applications': status_list}), 200
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True)

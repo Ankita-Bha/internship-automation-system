@@ -4,16 +4,16 @@ import HeroSection from "./components/HeroSection";
 import ProcessSection from "./components/ProcessSection";
 import CallToActionSection from "./components/CallToActionSection";
 import Header from "./components/Header";
-// import Footer from "./components/FooterLink";
 
 import LoginForm from "./pages/LoginForm";
 import RegisterForm from "./pages/RegisterForm";
 import NotFound from "./pages/NotFound";
-import Dashboard from "./pages/dashboard";
 import InternshipPage from "./pages/InternshipPage";
 import ResumeUploadPage from "./pages/ResumeUploadPage";
-import ResumeManagerPage from "./pages/ResumeManagerPage";
+// import ResumeManagerPage from "./pages/ResumeManagerPage";
 import ApplicationStatusPage from "./pages/ApplicationStatusPage";
+
+import PrivateRoute from "./components/PrivateRoute";
 
 function LandingPage() {
   return (
@@ -22,7 +22,6 @@ function LandingPage() {
       <HeroSection />
       <ProcessSection />
       <CallToActionSection />
-      {/* <FooterLink /> */}
     </>
   );
 }
@@ -33,11 +32,41 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginForm />} />
       <Route path="/register" element={<RegisterForm />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/internships" element={<InternshipPage />} />
-      <Route path="/resume-upload" element={<ResumeUploadPage />} />
-      <Route path="/resume-manager" element={<ResumeManagerPage />} />
-      <Route path="/application-status" element={<ApplicationStatusPage />} />
+
+      {/* ✅ Protected routes */}
+      <Route
+        path="/internships"
+        element={
+          <PrivateRoute>
+            <InternshipPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/resume-upload"
+        element={
+          <PrivateRoute>
+            <ResumeUploadPage />
+          </PrivateRoute>
+        }
+      />
+      {/* <Route
+        path="/resume-manager"
+        element={
+          <PrivateRoute>
+            <ResumeManagerPage />
+          </PrivateRoute>
+        }
+      /> */}
+      <Route
+        path="/application-status"
+        element={
+          <PrivateRoute>
+            <ApplicationStatusPage />
+          </PrivateRoute>
+        }
+      />
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

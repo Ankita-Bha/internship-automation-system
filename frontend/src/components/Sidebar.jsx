@@ -5,10 +5,10 @@ export default function Sidebar() {
     <div className="w-64 min-h-screen bg-white shadow-md p-4">
       <h2 className="text-xl font-semibold mb-6 text-orange-500">Internship System</h2>
       <nav className="flex flex-col gap-3">
-        <Link to="/dashboard" className="hover:text-orange-500">Dashboard</Link>
+        {/* <Link to="/dashboard" className="hover:text-orange-500">Dashboard</Link> */}
         <Link to="/internships" className="hover:text-orange-500">Browse Internships</Link>
         <Link to="/resume-upload" className="hover:text-orange-500">Upload Resume</Link>
-        <Link to="/resume-manager" className="hover:text-orange-500">Resume Manager</Link>
+        {/* <Link to="/resume-manager" className="hover:text-orange-500">Resume Manager</Link> */}
         <Link to="/application-status" className="hover:text-orange-500">Application Status</Link>
       </nav>
     </div>

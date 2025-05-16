@@ -1,15 +1,29 @@
-import React, { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const [token, setToken] = useState(null);
+  const [username, setUsername] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setToken(localStorage.getItem("token"));
+    setUsername(localStorage.getItem("username"));
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    setToken(null);
+    setUsername(null);
+    navigate("/");
+  };
 
   const navLinks = [
     { name: "Home", to: "/" },
-    { name: "Dashboard", to: "/dashboard" },
     { name: "Internships", to: "/internships" },
     { name: "Upload Resume", to: "/resume-upload" },
-    { name: "Resume Manager", to: "/resume-manager" },
+    // { name: "Resume Manager", to: "/resume-manager" },
     { name: "Application Status", to: "/application-status" },
   ];
 
@@ -38,18 +52,32 @@ export default function Header() {
             </NavLink>
           ))}
 
-          <Link
-            to="/login"
-            className="ml-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
-          >
-            Login
-          </Link>
-          <Link
-            to="/register"
-            className="ml-2 px-4 py-2 border border-orange-500 text-orange-500 rounded hover:bg-orange-500 hover:text-white transition"
-          >
-            Register
-          </Link>
+          {!token ? (
+            <>
+              <Link
+                to="/login"
+                className="ml-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+              >
+                Login
+              </Link>
+              <Link
+                to="/register"
+                className="ml-2 px-4 py-2 border border-orange-500 text-orange-500 rounded hover:bg-orange-500 hover:text-white transition"
+              >
+                Register
+              </Link>
+            </>
+          ) : (
+            <>
+              <span className="ml-4 px-4 py-2 text-gray-700">Hi, {username}</span>
+              <button
+                onClick={handleLogout}
+                className="ml-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+              >
+                Logout
+              </button>
+            </>
+          )}
         </nav>
 
         {/* Mobile Menu Toggle */}
@@ -102,20 +130,37 @@ export default function Header() {
             </NavLink>
           ))}
 
-          <Link
-            to="/login"
-            className="block mt-2 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
-            onClick={() => setIsOpen(false)}
-          >
-            Login
-          </Link>
-          <Link
-            to="/register"
-            className="block mt-1 px-4 py-2 border border-orange-500 text-orange-500 rounded hover:bg-orange-500 hover:text-white transition"
-            onClick={() => setIsOpen(false)}
-          >
-            Register
-          </Link>
+          {!token ? (
+            <>
+              <Link
+                to="/login"
+                className="block mt-2 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+                onClick={() => setIsOpen(false)}
+              >
+                Login
+              </Link>
+              <Link
+                to="/register"
+                className="block mt-1 px-4 py-2 border border-orange-500 text-orange-500 rounded hover:bg-orange-500 hover:text-white transition"
+                onClick={() => setIsOpen(false)}
+              >
+                Register
+              </Link>
+            </>
+          ) : (
+            <>
+              <span className="block mt-2 px-4 py-2 text-gray-700">Hi, {username}</span>
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsOpen(false);
+                }}
+                className="block mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+              >
+                Logout
+              </button>
+            </>
+          )}
         </nav>
       )}
     </header>
