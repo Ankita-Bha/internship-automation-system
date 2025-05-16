@@ -30,30 +30,74 @@ export default function ApplicationStatus() {
     fetchApplicationStatus();
   }, []);
 
+  // Status color mapping based on your scheme
+  const statusColors = {
+    Applied: "#3B82F6",      // Blue
+    "In Review": "#FBBF24",  // Yellow
+    Rejected: "#EF4444",     // Red
+    Accepted: "#10B981",     // Green
+  };
+
+  // Common styles for the container and cards
+  const styles = {
+    container: {
+      padding: "1rem",
+      backgroundColor: "#FFF9F4",
+      minHeight: "100vh",
+      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      color: "#0F172A", // Text Dark
+    },
+    header: {
+      fontSize: "1.75rem",
+      fontWeight: "700",
+      marginBottom: "1rem",
+      color: "#1E293B", // Slightly lighter text dark
+    },
+    card: {
+      border: "1px solid #E5E7EB", // Divider
+      padding: "1rem",
+      borderRadius: "0.5rem",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+      backgroundColor: "#FFFFFF",
+    },
+    jobTitle: {
+      fontSize: "1.25rem",
+      fontWeight: "700",
+      marginBottom: "0.25rem",
+    },
+    jobDescription: {
+      color: "#475569", // Text Medium
+      marginBottom: "0.5rem",
+      lineHeight: "1.4",
+    },
+    status: (status) => ({
+      fontWeight: "600",
+      color: statusColors[status] || "#6B7280", // Text Medium fallback
+    }),
+    loading: {
+      color: "#6B7280", // Text Medium
+    },
+    emptyState: {
+      fontStyle: "italic",
+      color: "#94A3B8", // Text Light
+    },
+  };
+
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-semibold mb-4">Your Applications</h1>
+    <div style={styles.container}>
+      <h1 style={styles.header}>Your Applications</h1>
+
       {loading ? (
-        <p>Loading...</p>
+        <p style={styles.loading}>Loading...</p>
       ) : applications.length === 0 ? (
-        <p>You have not applied to any jobs yet.</p>
+        <p style={styles.emptyState}>You have not applied to any jobs yet.</p>
       ) : (
-        <div className="space-y-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {applications.map((app) => (
-            <div key={app.application_id} className="border p-4 rounded shadow">
-              <h2 className="text-lg font-bold">{app.job_title}</h2>
-              <p className="text-gray-600 mb-2">{app.job_description}</p>
-              <p
-                className={`font-semibold ${
-                  app.status === "Accepted"
-                    ? "text-green-600"
-                    : app.status === "Rejected"
-                    ? "text-red-600"
-                    : "text-yellow-600"
-                }`}
-              >
-                Status: {app.status}
-              </p>
+            <div key={app.application_id} style={styles.card}>
+              <h2 style={styles.jobTitle}>{app.job_title}</h2>
+              <p style={styles.jobDescription}>{app.job_description}</p>
+              <p style={styles.status(app.status)}>Status: {app.status}</p>
             </div>
           ))}
         </div>
