@@ -102,10 +102,6 @@ DATABASE_URL=sqlite:///jobs.db
 5. Push to the branch (`git push origin feature/improvement`)
 6. Create a Pull Request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## 👥 Authors
 
 - Ankita 
